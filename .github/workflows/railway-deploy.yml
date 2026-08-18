@@ -1,0 +1,59 @@
+name: Build and Deploy to Railway
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build bot
+        working-directory: artifacts/discord-bot
+        run: |
+          npm ci
+          npm run build
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: |
+          npm install -g @railway/cli || npm install -g railway
+
+      - name: Login to Railway
+        env:
+          RAILWAY_API_KEY: ${{ secrets.RAILWAY_API_KEY }}
+        run: |
+          # login using the API key. The exact login command depends on your CLI version.
+          # For the official CLI: `railway login --apiKey <key>` or `railway token login` on newer CLIs.
+          # Try both forms if one fails; adjust per Railway docs if necessary.
+          set -e
+          railway login --apiKey "$RAILWAY_API_KEY" || railway token login "$RAILWAY_API_KEY"
+
+      - name: Deploy to Railway
+        env:
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+        run: |
+          set -e
+          # Deploy the current branch to the Railway project.
+          # `railway up` or `railway deploy` can be used depending on CLI version.
+          # Use the command that your Railway CLI supports:
+          railway up --project "$RAILWAY_PROJECT_ID" --branch main --yes || railway deploy --project "$RAILWAY_PROJECT_ID" --branch main --yes
+
+      - name: Verify health endpoint
+        run: |
+          # optional: wait a bit then hit the health endpoint if you have a public Railway URL
+          echo "Deployed to Railway project: $RAILWAY_PROJECT_ID"
