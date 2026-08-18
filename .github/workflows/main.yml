@@ -1,0 +1,7 @@
+name: CI/CD
+
+on: push: branches: [ main ]
+
+jobs: build: runs-on: ubuntu-latest steps: - uses: actions/checkout@v4 - name: Use Node.js uses: actions/setup-node@v4 with: node-version: '20' - name: Install dependencies (bot) run: | cd artifacts/discord-bot npm ci - name: Build run: | cd artifacts/discord-bot npm run build - name: Typecheck run: | cd artifacts/discord-bot npm run typecheck || true
+
+deploy: needs: build runs-on: ubuntu-latest if: github.ref == 'refs/heads/main' steps: - uses: actions/checkout@v4 - name: Deploy via SSH uses: appleboy/ssh-action@v0.1.7 with: host: ${{ secrets.SSH_HOST }} username: ${{ secrets.SSH_USER }} key: ${{ secrets.SSH_PRIVATE_KEY }} port: ${{ secrets.SSH_PORT }} script: | set -e cd ${{ secrets.DEPLOY_PATH }} git fetch --all git reset --hard origin/main cd artifacts/discord-bot npm ci --production npm run build pm2 start ecosystem.config.js --env production || pm2 reload ecosystem.config.js --env production
