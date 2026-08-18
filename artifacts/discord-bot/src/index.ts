@@ -1,4 +1,5 @@
 import { Client, GatewayIntentBits } from 'discord.js';
+import express from 'express';
 import {
   DISCORD_TOKEN,
   LAVALINK_HOST,
@@ -48,6 +49,15 @@ async function main() {
       await message.reply('Pong!');
     }
   });
+
+  // Health-check endpoint
+  try {
+    const app = express();
+    app.get('/health', (_req, res) => res.status(200).json({ status: 'ok' }));
+    app.listen(PORT, () => console.log(`Health check listening on port ${PORT}`));
+  } catch (err) {
+    console.warn('Failed to start health endpoint', err);
+  }
 
   // Graceful shutdown
   const shutdown = async () => {
